@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>星际战机 - 末日空战</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <main class="game-shell" aria-label="星际战机 HTML5 Canvas 游戏">
+    <canvas id="gameCanvas" aria-label="游戏画布"></canvas>
+
+    <section id="startMenu" class="screen screen--active screen--home">
+      <div class="corner corner--tl"></div>
+      <div class="corner corner--tr"></div>
+      <div class="corner corner--bl"></div>
+      <div class="corner corner--br"></div>
+
+      <div class="brand">
+        <h1>星际战机</h1>
+        <span class="brand__sub">末 日 空 战</span>
+      </div>
+
+      <div class="hero-ship" aria-hidden="true">
+        <span></span>
+      </div>
+
+      <div class="menu-actions">
+        <button id="startButton" class="button button--primary">开始游戏</button>
+        <button id="helpButton" class="button">游戏帮助</button>
+      </div>
+
+      <div class="dock" aria-hidden="true">
+        <div class="dock-item"><b>杯</b><span>成就</span></div>
+        <div class="dock-item"><b>榜</b><span>排行</span></div>
+        <div class="dock-item"><b>签</b><span>签到</span></div>
+        <div class="dock-item"><b>准</b><span>任务</span></div>
+      </div>
+    </section>
+
+    <section id="pauseMenu" class="screen screen--panel">
+      <div class="panel">
+        <h2>游戏暂停</h2>
+        <button id="resumeButton" class="button button--primary">继续游戏</button>
+        <button id="restartFromPauseButton" class="button">重新开始</button>
+        <button id="homeFromPauseButton" class="button">返回主菜单</button>
+      </div>
+    </section>
+
+    <section id="gameOverMenu" class="screen screen--panel">
+      <div class="panel panel--danger">
+        <h2>游戏结束</h2>
+        <p>最终得分</p>
+        <strong id="finalScore">0</strong>
+        <button id="restartButton" class="button button--primary">再来一局</button>
+        <button id="homeButton" class="button">返回主菜单</button>
+      </div>
+    </section>
+
+    <section id="clearMenu" class="screen screen--panel">
+      <div class="panel panel--clear">
+        <h2>关卡通过</h2>
+        <p>作战评分</p>
+        <strong id="clearScore">0</strong>
+        <button id="continueButton" class="button button--primary">继续挑战</button>
+        <button id="homeFromClearButton" class="button">返回主菜单</button>
+      </div>
+    </section>
+
+    <section id="helpMenu" class="screen screen--panel">
+      <div class="panel">
+        <h2>游戏帮助</h2>
+        <ul class="help-list">
+          <li>电脑：WASD 或方向键移动，空格暂停。</li>
+          <li>手机：按住屏幕左下虚拟摇杆拖动飞机。</li>
+          <li>飞机会自动发射子弹，击毁敌机获得分数。</li>
+          <li>碰撞会损失血量，血量为 0 时游戏结束。</li>
+        </ul>
+        <button id="closeHelpButton" class="button button--primary">返回</button>
+      </div>
+    </section>
+
+    <button id="pauseButton" class="pause-button" aria-label="暂停游戏">Ⅱ</button>
+
+    <div id="hud" class="hud" aria-hidden="true">
+      <div class="pilot-badge">
+        <div class="pilot-badge__avatar"></div>
+        <div class="pilot-badge__bars">
+          <div class="status-line status-line--hp"><i id="healthBar"></i><span>HP</span></div>
+          <div class="status-line status-line--ammo"><i></i><span>火力</span></div>
+        </div>
+      </div>
+      <div class="hud-card">
+        <span>得分</span>
+        <strong id="scoreText">0</strong>
+      </div>
+      <div class="hud-card">
+        <span>关卡</span>
+        <strong id="levelText">1</strong>
+      </div>
+    </div>
+
+    <div id="skillPad" class="skill-pad" aria-hidden="true">
+      <div class="skill-button skill-button--shield">盾</div>
+      <div class="skill-button skill-button--boost">冲</div>
+      <div class="skill-button skill-button--fire">弹</div>
+      <div class="auto-fire">自动<br />射击</div>
+    </div>
+  </main>
+
+  <script src="game.js"></script>
+</body>
+</html>
