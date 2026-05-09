@@ -9,7 +9,11 @@ const ui = {
   gameOverMenu: document.getElementById("gameOverMenu"),
   clearMenu: document.getElementById("clearMenu"),
   helpMenu: document.getElementById("helpMenu"),
+  clearVideoOverlay: document.getElementById("clearVideoOverlay"),
+  clearVideo: document.getElementById("clearVideo"),
+  clearResultPanel: document.getElementById("clearResultPanel"),
   hud: document.getElementById("hud"),
+  skillPad: document.getElementById("skillPad"),
   pauseButton: document.getElementById("pauseButton"),
   scoreText: document.getElementById("scoreText"),
   finalScore: document.getElementById("finalScore"),
@@ -38,7 +42,9 @@ const state = {
   level: 1,
   clearTarget: 650,
   clearTimer: 0,
-  clearDuration: 3.1,
+  clearDuration: 1.25,
+  clearVideoTimeout: null,
+  scoreRollFrame: null,
   spawnTimer: 0,
   shootTimer: 0,
   hurtTimer: 0,
@@ -114,6 +120,12 @@ function resetGame() {
   state.level = 1;
   state.clearTarget = 650;
   state.clearTimer = 0;
+  clearVideoTimer();
+  cancelScoreRoll();
+  ui.clearVideoOverlay.classList.remove("is-visible");
+  ui.clearVideoOverlay.classList.remove("is-result");
+  ui.clearVideo.pause();
+  ui.clearResultPanel.classList.remove("is-visible");
   state.spawnTimer = 0;
   state.shootTimer = 0;
   state.hurtTimer = 0;
@@ -128,7 +140,7 @@ function resetGame() {
 
 /** 显示指定界面并隐藏其他界面。 */
 function showScreen(name) {
-  [ui.startMenu, ui.pauseMenu, ui.gameOverMenu, ui.clearMenu, ui.helpMenu].forEach((screen) => {
+  [ui.startMenu, ui.pauseMenu, ui.gameOverMenu, ui.clearMenu, ui.helpMenu].filter(Boolean).forEach((screen) => {
     screen.classList.remove("screen--active");
   });
   if (name) {
@@ -139,6 +151,7 @@ function showScreen(name) {
 /** 切换 HUD 与暂停按钮的显示状态。 */
 function setGameUiVisible(visible) {
   ui.hud.classList.toggle("is-visible", visible);
+  ui.skillPad.classList.toggle("is-visible", visible);
   ui.pauseButton.classList.toggle("is-visible", visible);
 }
 
@@ -168,6 +181,12 @@ function resumeGame() {
 /** 返回主菜单并隐藏游戏 HUD。 */
 function goHome() {
   state.mode = "menu";
+  clearVideoTimer();
+  cancelScoreRoll();
+  ui.clearVideoOverlay.classList.remove("is-visible");
+  ui.clearVideoOverlay.classList.remove("is-result");
+  ui.clearVideo.pause();
+  ui.clearResultPanel.classList.remove("is-visible");
   showScreen("startMenu");
   setGameUiVisible(false);
 }
@@ -193,9 +212,68 @@ function triggerStageClear() {
 
 /** 动画结束后显示通关结果界面。 */
 function showStageClearMenu() {
+  clearVideoTimer();
+  cancelScoreRoll();
   state.mode = "clear";
-  ui.clearScore.textContent = state.score;
-  showScreen("clearMenu");
+  ui.clearVideo.pause();
+  ui.clearVideoOverlay.classList.add("is-visible");
+  ui.clearVideoOverlay.classList.add("is-result");
+  ui.clearResultPanel.classList.add("is-visible");
+  ui.clearScore.textContent = "0";
+  rollClearScore(state.score);
+}
+
+/** 让通关评分从 0 平滑滚动到最终分数。 */
+function rollClearScore(targetScore) {
+  const duration = 1500;
+  const startTime = performance.now();
+  const tick = (time) => {
+    const progress = clamp((time - startTime) / duration, 0, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    ui.clearScore.textContent = Math.floor(targetScore * eased);
+    if (progress < 1) {
+      state.scoreRollFrame = requestAnimationFrame(tick);
+    } else {
+      ui.clearScore.textContent = targetScore;
+      state.scoreRollFrame = null;
+    }
+  };
+  state.scoreRollFrame = requestAnimationFrame(tick);
+}
+
+/** 取消正在进行的通关评分滚动动画。 */
+function cancelScoreRoll() {
+  if (state.scoreRollFrame) {
+    cancelAnimationFrame(state.scoreRollFrame);
+    state.scoreRollFrame = null;
+  }
+}
+
+/** 显示并播放通关视频，播放失败时使用 Canvas 通关动画兜底。 */
+function playClearVideo() {
+  clearVideoTimer();
+  cancelScoreRoll();
+  state.mode = "clearVideo";
+  ui.clearResultPanel.classList.remove("is-visible");
+  ui.clearVideoOverlay.classList.remove("is-result");
+  ui.clearVideoOverlay.classList.add("is-visible");
+  ui.clearVideo.currentTime = 0;
+  const playPromise = ui.clearVideo.play();
+  state.clearVideoTimeout = window.setTimeout(showStageClearMenu, 9000);
+  if (playPromise) {
+    playPromise.catch(() => {
+      clearVideoTimer();
+      showStageClearMenu();
+    });
+  }
+}
+
+/** 清除通关视频的兜底计时器，避免重复弹出界面。 */
+function clearVideoTimer() {
+  if (state.clearVideoTimeout) {
+    window.clearTimeout(state.clearVideoTimeout);
+    state.clearVideoTimeout = null;
+  }
 }
 
 /** 从通关界面进入更高难度的下一轮挑战。 */
@@ -203,6 +281,12 @@ function continueChallenge() {
   state.mode = "playing";
   state.clearTarget += 650;
   state.clearTimer = 0;
+  clearVideoTimer();
+  cancelScoreRoll();
+  ui.clearVideoOverlay.classList.remove("is-visible");
+  ui.clearVideoOverlay.classList.remove("is-result");
+  ui.clearVideo.pause();
+  ui.clearResultPanel.classList.remove("is-visible");
   state.player.health = state.player.maxHealth;
   state.player.x = state.width / 2;
   state.player.y = state.height * 0.78;
@@ -362,7 +446,7 @@ function updateStageClear(delta) {
   });
   state.particles = state.particles.filter((particle) => particle.life > 0);
   if (state.clearTimer >= state.clearDuration) {
-    showStageClearMenu();
+    playClearVideo();
   }
 }
 
@@ -428,29 +512,82 @@ function drawBackground() {
 /** 绘制玩家飞机。 */
 function drawPlayer() {
   const p = state.player;
+  const s = state.scale;
   ctx.save();
   ctx.translate(p.x, p.y);
   if (state.hurtTimer > 0 && Math.floor(state.hurtTimer * 24) % 2 === 0) {
     ctx.globalAlpha = 0.55;
   }
-  ctx.fillStyle = "#e0f2fe";
-  ctx.strokeStyle = "#38bdf8";
-  ctx.lineWidth = 2;
+
+  ctx.shadowColor = "#38bdf8";
+  ctx.shadowBlur = 18 * s;
+  ctx.fillStyle = "rgba(14, 165, 233, 0.18)";
   ctx.beginPath();
-  ctx.moveTo(0, -34 * state.scale);
-  ctx.lineTo(18 * state.scale, 22 * state.scale);
-  ctx.lineTo(0, 12 * state.scale);
-  ctx.lineTo(-18 * state.scale, 22 * state.scale);
+  ctx.ellipse(0, 12 * s, 36 * s, 54 * s, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  const wingGradient = ctx.createLinearGradient(-42 * s, -8 * s, 42 * s, 20 * s);
+  wingGradient.addColorStop(0, "#dbeafe");
+  wingGradient.addColorStop(0.36, "#38bdf8");
+  wingGradient.addColorStop(0.5, "#0f172a");
+  wingGradient.addColorStop(0.64, "#f8fafc");
+  wingGradient.addColorStop(1, "#7dd3fc");
+  ctx.fillStyle = wingGradient;
+  ctx.strokeStyle = "#7dd3fc";
+  ctx.lineWidth = 1.6 * s;
+  ctx.beginPath();
+  ctx.moveTo(0, -38 * s);
+  ctx.lineTo(19 * s, -6 * s);
+  ctx.lineTo(46 * s, 18 * s);
+  ctx.lineTo(15 * s, 14 * s);
+  ctx.lineTo(8 * s, 36 * s);
+  ctx.lineTo(0, 20 * s);
+  ctx.lineTo(-8 * s, 36 * s);
+  ctx.lineTo(-15 * s, 14 * s);
+  ctx.lineTo(-46 * s, 18 * s);
+  ctx.lineTo(-19 * s, -6 * s);
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
-  ctx.fillStyle = "#1d4ed8";
-  ctx.fillRect(-5 * state.scale, -18 * state.scale, 10 * state.scale, 32 * state.scale);
-  ctx.fillStyle = "#f97316";
+
+  const bodyGradient = ctx.createLinearGradient(0, -42 * s, 0, 38 * s);
+  bodyGradient.addColorStop(0, "#f8fafc");
+  bodyGradient.addColorStop(0.36, "#93c5fd");
+  bodyGradient.addColorStop(0.72, "#1d4ed8");
+  bodyGradient.addColorStop(1, "#0f172a");
+  ctx.fillStyle = bodyGradient;
   ctx.beginPath();
-  ctx.moveTo(-8 * state.scale, 24 * state.scale);
-  ctx.lineTo(0, 42 * state.scale);
-  ctx.lineTo(8 * state.scale, 24 * state.scale);
+  ctx.moveTo(0, -46 * s);
+  ctx.bezierCurveTo(13 * s, -18 * s, 16 * s, 12 * s, 0, 35 * s);
+  ctx.bezierCurveTo(-16 * s, 12 * s, -13 * s, -18 * s, 0, -46 * s);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.shadowColor = "#f97316";
+  ctx.shadowBlur = 16 * s;
+  ctx.fillStyle = "#fb923c";
+  ctx.beginPath();
+  ctx.ellipse(0, -18 * s, 5 * s, 13 * s, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.shadowColor = "#7dd3fc";
+  ctx.shadowBlur = 14 * s;
+  ctx.fillStyle = "#e0f2fe";
+  ctx.fillRect(-28 * s, 12 * s, 8 * s, 5 * s);
+  ctx.fillRect(20 * s, 12 * s, 8 * s, 5 * s);
+
+  const flameGradient = ctx.createLinearGradient(0, 24 * s, 0, 64 * s);
+  flameGradient.addColorStop(0, "#f8fafc");
+  flameGradient.addColorStop(0.32, "#38bdf8");
+  flameGradient.addColorStop(0.68, "#f97316");
+  flameGradient.addColorStop(1, "rgba(249, 115, 22, 0)");
+  ctx.fillStyle = flameGradient;
+  ctx.shadowColor = "#38bdf8";
+  ctx.shadowBlur = 20 * s;
+  ctx.beginPath();
+  ctx.moveTo(-9 * s, 27 * s);
+  ctx.lineTo(0, (54 + Math.sin(performance.now() / 80) * 8) * s);
+  ctx.lineTo(9 * s, 27 * s);
   ctx.fill();
   ctx.restore();
 }
@@ -667,6 +804,11 @@ function bindEvents() {
   canvas.addEventListener("pointermove", handlePointerMove);
   canvas.addEventListener("pointerup", handlePointerUp);
   canvas.addEventListener("pointercancel", handlePointerUp);
+  ui.clearVideo.addEventListener("ended", showStageClearMenu);
+  ui.clearVideo.addEventListener("error", () => {
+    clearVideoTimer();
+    showStageClearMenu();
+  });
   ui.startButton.addEventListener("click", startGame);
   ui.pauseButton.addEventListener("click", pauseGame);
   ui.resumeButton.addEventListener("click", resumeGame);
@@ -684,6 +826,8 @@ function bindEvents() {
 function init() {
   resizeCanvas();
   bindEvents();
+  ui.clearVideoOverlay.classList.remove("is-visible");
+  ui.clearVideo.pause();
   setGameUiVisible(false);
   requestAnimationFrame(gameLoop);
 }

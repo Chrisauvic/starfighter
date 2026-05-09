@@ -11,31 +11,9 @@
     <canvas id="gameCanvas" aria-label="游戏画布"></canvas>
 
     <section id="startMenu" class="screen screen--active screen--home">
-      <div class="corner corner--tl"></div>
-      <div class="corner corner--tr"></div>
-      <div class="corner corner--bl"></div>
-      <div class="corner corner--br"></div>
-
-      <div class="brand">
-        <h1>星际战机</h1>
-        <span class="brand__sub">末 日 空 战</span>
-      </div>
-
-      <div class="hero-ship" aria-hidden="true">
-        <span></span>
-      </div>
-
-      <div class="menu-actions">
-        <button id="startButton" class="button button--primary">开始游戏</button>
-        <button id="helpButton" class="button">游戏帮助</button>
-      </div>
-
-      <div class="dock" aria-hidden="true">
-        <div class="dock-item"><b>杯</b><span>成就</span></div>
-        <div class="dock-item"><b>榜</b><span>排行</span></div>
-        <div class="dock-item"><b>签</b><span>签到</span></div>
-        <div class="dock-item"><b>准</b><span>任务</span></div>
-      </div>
+      <button id="startButton" class="home-hotspot home-hotspot--start" aria-label="开始游戏">START</button>
+      <button id="helpButton" class="home-hotspot home-hotspot--help" aria-label="游戏帮助">HELP</button>
+      <div class="home-glow" aria-hidden="true"></div>
     </section>
 
     <section id="pauseMenu" class="screen screen--panel">
@@ -57,16 +35,6 @@
       </div>
     </section>
 
-    <section id="clearMenu" class="screen screen--panel">
-      <div class="panel panel--clear">
-        <h2>关卡通过</h2>
-        <p>作战评分</p>
-        <strong id="clearScore">0</strong>
-        <button id="continueButton" class="button button--primary">继续挑战</button>
-        <button id="homeFromClearButton" class="button">返回主菜单</button>
-      </div>
-    </section>
-
     <section id="helpMenu" class="screen screen--panel">
       <div class="panel">
         <h2>游戏帮助</h2>
@@ -81,6 +49,18 @@
     </section>
 
     <button id="pauseButton" class="pause-button" aria-label="暂停游戏">Ⅱ</button>
+
+    <div id="clearVideoOverlay" class="clear-video-overlay" aria-hidden="true">
+      <video id="clearVideo" class="clear-video" src="assets/clear-animation.mp4" preload="metadata" playsinline muted></video>
+      <div class="clear-video-frame">
+        <span>MISSION CLEAR</span>
+      </div>
+      <div id="clearResultPanel" class="clear-result-panel" aria-label="通关结算">
+        <strong id="clearScore">0</strong>
+        <button id="continueButton" class="clear-continue-button">继续挑战</button>
+        <button id="homeFromClearButton" class="clear-home-button">返回主菜单</button>
+      </div>
+    </div>
 
     <div id="hud" class="hud" aria-hidden="true">
       <div class="pilot-badge">
